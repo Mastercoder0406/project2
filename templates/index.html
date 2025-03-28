@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crowd Analysis Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Crowd Analysis Dashboard</h1>
+        
+        <!-- Input Selection Section -->
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+            <h2 class="text-xl font-semibold mb-4">Video Input Selection</h2>
+            <form id="inputForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Input Type</label>
+                    <select id="inputType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm" onchange="toggleInputFields()">
+                        <option value="recorded">Recorded Video</option>
+                        <option value="rtsp">RTSP Stream</option>
+                    </select>
+                </div>
+                
+                <div id="recordedInput">
+                    <label class="block text-sm font-medium text-gray-700">Upload Video File</label>
+                    <input type="file" id="videoFile" accept="video/*" class="mt-1 block w-full">
+                </div>
+                
+                <div id="rtspInput" style="display: none;">
+                    <label class="block text-sm font-medium text-gray-700">RTSP URL</label>
+                    <input type="text" id="rtspUrl" placeholder="rtsp://example.com/stream" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm">
+                </div>
+                
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Start Analysis
+                </button>
+            </form>
+        </div>
+        
+        <!-- Live Feed Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Live Feed</h2>
+                <img src="{{ url_for('video_feed') }}" class="w-full rounded">
+            </div>
+            
+            <!-- Real-time Analytics -->
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Real-time Analytics</h2>
+                <div id="analytics" class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span>People Count:</span>
+                        <span id="count" class="font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Density:</span>
+                        <span id="density" class="font-bold">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>Anomalies:</span>
+                        <span id="anomalies" class="font-bold">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Historical Data -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Historical Trends</h2>
+                <div id="trendChart"></div>
+            </div>
+            
+            <div class="bg-white p-6 rounded-lg shadow-lg">
+                <h2 class="text-xl font-semibold mb-4">Density Heatmap</h2>
+                <div id="heatmapChart"></div>
+            </div>
+        </div>
+        
+        <!-- Report Generation -->
+        <div class="bg-white p-6 rounded-lg shadow-lg">
+            <h2 class="text-xl font-semibold mb-4">Generate Reports</h2>
+            <div class="flex space-x-4">
+                <button onclick="generateReport('pdf')" 
+                        class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    PDF Report
+                </button>
+                <button onclick="generateReport('csv')" 
+                        class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                    CSV Export
+                </button>
+                <button onclick="generateReport('json')" 
+                        class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                    JSON Export
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleInputFields() {
+            const inputType = document.getElementById('inputType').value;
+            const recordedInput = document.getElementById('recordedInput');
+            const rtspInput = document.getElementById('rtspInput');
+            
+            if (inputType === 'recorded') {
+                recordedInput.style.display = 'block';
+                rtspInput.style.display = 'none';
+            } else {
+                recordedInput.style.display = 'none';
+                rtspInput.style.display = 'block';
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('inputForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const inputType = document.getElementById('inputType').value;
+            const formData = new FormData();
+            
+            formData.append('input_type', inputType);
+            if (inputType === 'recorded') {
+                const videoFile = document.getElementById('videoFile').files[0];
+                formData.append('video_file', videoFile);
+            } else {
+                const rtspUrl = document.getElementById('rtspUrl').value;
+                formData.append('rtsp_url', rtspUrl);
+            }
+            
+            try {
+                const response = await fetch('/set_input_source', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Input source updated successfully');
+                } else {
+                    alert('Error updating input source');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error updating input source');
+            }
+        });
+
+        // Update real-time analytics
+        function updateAnalytics() {
+            fetch('/api/analytics')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('count').textContent = data.count;
+                    document.getElementById('density').textContent = 
+                        data.density.toFixed(2);
+                    document.getElementById('anomalies').textContent = 
+                        data.anomalies.length;
+                    
+                    updateCharts(data);
+                });
+        }
+
+        // Update charts with new data
+        function updateCharts(data) {
+            // Update trend chart
+            const trace = {
+                x: [data.timestamp],
+                y: [data.count],
+                type: 'scatter'
+            };
+            
+            Plotly.update('trendChart', trace);
+            
+            // Update heatmap
+            const heatmapTrace = {
+                z: [[data.density]],
+                type: 'heatmap',
+                colorscale: 'Viridis'
+            };
+            
+            Plotly.update('heatmapChart', heatmapTrace);
+        }
+
+        // Generate reports
+        function generateReport(type) {
+            fetch(`/api/report/${type}`)
+                .then(response => response.json())
+                .then(data => {
+                    window.open(data.report_url, '_blank');
+                });
+        }
+
+        // Initialize charts
+        Plotly.newPlot('trendChart', [{
+            x: [],
+            y: [],
+            type: 'scatter',
+            name: 'People Count'
+        }], {
+            title: 'Crowd Count Over Time'
+        });
+
+        Plotly.newPlot('heatmapChart', [{
+            z: [[0]],
+            type: 'heatmap',
+            colorscale: 'Viridis'
+        }], {
+            title: 'Crowd Density Heatmap'
+        });
+
+        // Update analytics every second
+        setInterval(updateAnalytics, 1000);
+    </script>
+</body>
+</html>

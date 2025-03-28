@@ -1,0 +1,15 @@
+flask==2.3.3
+opencv-python==4.8.0
+numpy==1.24.3
+ultralytics==8.0.145 
+//ultralyticsis the yolo model 
+scipy==1.11.2
+pandas==2.0.3
+plotly==5.16.1
+dash==2.13.0
+python-dotenv==1.0.0
+twilio==8.9.1
+smtplib-status==1.1.3
+pymongo==4.5.0
+fpdf2==2.7.5
+scikit-learn==1.3.0
