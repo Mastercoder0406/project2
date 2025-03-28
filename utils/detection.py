@@ -22,12 +22,19 @@ class CrowdDetector:
         return results[0]
     
     def draw_detections(self, frame, results):
-        for box in results.boxes.xyxy:
-            x1, y1, x2, y2 = map(int, box[:4])
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # Check if results is a dictionary (from analysis_results)
+        if isinstance(results, dict):
+            count = results.get('count', 0)
+        else:
+            # If results is from YOLO detection
+            count = len(results.boxes)
+            # Draw bounding boxes
+            for box in results.boxes.xyxy:
+                x1, y1, x2, y2 = map(int, box[:4].cpu().numpy())
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
         
         # Add count overlay
-        cv2.putText(frame, f"Count: {len(results.boxes)}", 
+        cv2.putText(frame, f"Count: {count}", 
                     (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
         
         return frame

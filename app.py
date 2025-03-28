@@ -25,8 +25,8 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 # Initialize components
 detector = CrowdDetector()
 analytics = CrowdAnalytics()
-notification_manager = NotificationManager()
-db_manager = DatabaseManager()
+# notification_manager = NotificationManager()
+# db_manager = DatabaseManager()
 report_generator = ReportGenerator()
 
 # Global variables
@@ -48,21 +48,20 @@ def process_frames():
             # Analyze crowd
             analysis = analytics.analyze(frame, detections)
             
-            # Store results
-            timestamp = datetime.now()
+            # Convert numpy types to Python native types for JSON serialization
             analysis_results.update({
-                'timestamp': timestamp,
-                'count': analysis['count'],
-                'density': analysis['density'],
-                'movement': analysis['movement'],
-                'anomalies': analysis['anomalies']
+                'timestamp': datetime.now().isoformat(),
+                'count': int(analysis['count']),
+                'density': float(analysis['density']),
+                'movement': [float(x) for x in analysis['movement']] if analysis['movement'] else [],
+                'anomalies': [[float(x) for x in anomaly] for anomaly in analysis['anomalies']]
             })
             
             # Check thresholds and send alerts if needed
-            if analysis['count'] > app.config['CROWD_THRESHOLD'] or \
-               analysis['density'] > app.config['DENSITY_THRESHOLD']:
+            if analysis_results['count'] > app.config['CROWD_THRESHOLD'] or \
+               analysis_results['density'] > app.config['DENSITY_THRESHOLD']:
                 # notification_manager.send_alert(analysis_results)
-                print("notified")
+                print('sent msg')
             
             # Store in database
             # db_manager.store_analysis(analysis_results)
@@ -157,11 +156,11 @@ def set_input_source():
 def get_analytics():
     return jsonify(analysis_results)
 
-@app.route('/api/report/<report_type>')
-def generate_report(report_type):
-    data = db_manager.get_historical_data()
-    report_path = report_generator.generate(data, report_type)
-    return jsonify({'report_url': report_path})
+# @app.route('/api/report/<report_type>')
+# def generate_report(report_type):
+#     data = db_manager.get_historical_data()
+#     report_path = report_generator.generate(data, report_type)
+#     return jsonify({'report_url': report_path})
 
 if __name__ == '__main__':
     app.run(debug=True)
